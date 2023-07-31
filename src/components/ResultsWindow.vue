@@ -2,7 +2,7 @@
   <div class="results-window">
     <div class="results-content">
       <span @click='onClose' class="close">
-        <img alt="Close Modal" aria-label="close the popup window window and return to the form" src="../assets/closemodal.png">
+        <img alt="Close Modal" aria-label="close the popup window and return to the form" src="../assets/closemodal.png">
       </span>
       <h2>Thank you for your responses, we will get back to you soon!</h2>
       <p><strong>Full Name:</strong><br/>{{fullName()}}</p>
@@ -47,7 +47,7 @@ export default class ResultsWindow extends Vue {
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped lang="scss">/* we will explain what these classes do next! */
+<style scoped lang="scss">
   .results-window{
     display: flex;
     align-items: center;
