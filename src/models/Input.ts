@@ -58,14 +58,14 @@ export default interface TextInput extends BaseModel {
   characterRestriction?: RegExp;
 
   /**
-   * The input's maximum character count
+   * The input's maximum character count if string, or selection count if array
    */
-  charMax?: number;
+  inputMax?: number;
 
   /**
-   * The input's minimum character count
+   * The input's minimum character count if string, or selection count if array
    */
-  charMin?: number;
+  inputMin?: number;
 
   /**
    * The input's placeholder

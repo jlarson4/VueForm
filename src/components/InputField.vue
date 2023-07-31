@@ -5,7 +5,7 @@
     </p>
     <template v-for="(option) in options">
         <label :key="option.ID" class="checkbox">
-          <input :type="type" :value="option" :name="name + '[]'" @input="onCheckboxChange($event)"/>
+          <input :type="type" :value="option" :name="name + '[]'" v-model="curVal" />
           <span>{{option}}</span>
         </label>
     </template>
@@ -13,7 +13,7 @@
   <div v-else>
     <label>{{ label }}<span v-if="required === true" class="required">*</span>
       <div v-if="type == 'select'">
-        <select @input="onInputChange($event)" v-model="value" v-bind:class="{ error: hasError }">
+        <select v-model="curVal" @blur="onBlur" v-bind:class="{ error: hasError }">
           <option value="">Area of Interest</option>
           <template v-for="(option) in options">
               <option :key="option.ID" :value="option">{{option}}</option>
@@ -21,14 +21,13 @@
         </select>
       </div>
       <div v-else-if="type == 'textarea'">
-        <textarea :placeholder="placeholder" v-model="value" v-bind:class="{ error: hasError }" @input="onInputChange($event)"/>
-        <span v-if="charMax" class="character-count">{{curCharCount()}}/{{charMax}}</span>
+        <textarea :placeholder="placeholder" v-model="curVal" @blur="onBlur" v-bind:class="{ error: hasError }"/>
       </div>
       <div v-else>
-        <input :type="type" :placeholder="placeholder" v-model="value" @input="onInputChange($event)" v-bind:class="{ error: hasError }" />
+        <input :type="type" :placeholder="placeholder" v-model="curVal" @blur="onBlur" v-bind:class="{ error: hasError }" />
       </div>
     </label>
-    <p class="error-message">{{errorMessage}}</p>
+    <div class="field-notes"><p class="error-message">{{errorMessage}}</p><span v-if="inputMax && type == 'textarea'" class="character-count">{{curCharCount()}}/{{inputMax}}</span></div>
   </div>
 </template>
 
@@ -47,19 +46,50 @@ export default class InputField extends Vue {
   @Prop() private options?: string
   @Prop() private placeholder?: string
   @Prop() private characterRestriction!: RegExp
-  @Prop() private charMin?: number
-  @Prop() private charMax?: number
+  @Prop() private inputMin?: number
+  @Prop() private inputMax?: number
   private errorMessage = '\u00A0'
   private hasError = false
   private validated = false
   private value = ''
 
   /**
+  * Getter and setter for handling the modelling of the input value
+  */
+
+  /**
+  * Outputs the current value of the field for the curVal model
+  * @return number
+  */
+  get curVal () {
+    const val = this.$store.getters[this.getter]
+    // If the field was previously validated,
+    // but cleared out by the system, mark it as invalid now before getting the value
+    if (this.required && this.validated && !val.length) {
+      this.validated = false
+    }
+    return this.$store.getters[this.getter]
+  }
+
+  /**
+  * Sets the new state of the field for the curVal model
+  * @return number
+  */
+  set curVal (value) {
+    this.$store.commit(this.mutation, { value: this.validateField(value) })
+
+    // When an input exceeds the character limit, the state does not change,
+    // but the content of the input does change
+    // Force update here to set the input back to the state and erase the user's excess input
+    this.$forceUpdate()
+  }
+
+  /**
   * Outputs the current character count for fields that have a maximum character count
   * @return number
   */
   curCharCount () {
-    return this.value.length
+    return this.$store.getters[this.getter].length
   }
 
   /**
@@ -68,17 +98,19 @@ export default class InputField extends Vue {
   * @param isBlur boolean determines where on blur or not
   * @return string – current value
   */
-  validateField (value: string) {
+  validateField (value: string|string[]) {
     // Only check validation if field is required
     if (this.required) {
       // If type is checkbox
-      if (this.type === 'checkbox') {
-        value = this.validateCheckbox(value)
+      if (value instanceof Array) {
+        value = this.validateArray(value)
       } else {
-        value = this.validateTextField(value)
+        value = this.validateText(value)
       }
 
-      // If the current state is changing from valid to invalid
+      // If the current validity is changing
+      // Update the valid fields counter
+      // Update the valid state
       if (this.hasError && this.validated) {
         this.$store.commit(mutations.invalidateField)
         this.validated = false
@@ -97,7 +129,7 @@ export default class InputField extends Vue {
   * @param isBlur boolean determines where on blur or not
   * @return string – current value
   */
-  validateTextField (value: string) {
+  validateText (value: string) {
     let message = ''
     // If there is a character restriction, strip invalid characters
     if (this.characterRestriction) {
@@ -109,13 +141,13 @@ export default class InputField extends Vue {
       message = 'This field is required'
     } else {
       // If the value is shorter than the min length, inform the user of the min length
-      if (this.charMin && value.length < this.charMin) {
-        message = 'Minimum input required: ' + this.charMin + ' characters'
+      if (this.inputMin && value.length < this.inputMin) {
+        message = 'Minimum input required: ' + this.inputMin + ' characters'
       }
 
       // If the value is longer than the max length, truncate the value and inform the user
-      if (this.charMax && value.length > this.charMax) {
-        value = value.slice(0, this.charMax)
+      if (this.inputMax && value.length > this.inputMax) {
+        value = value.slice(0, this.inputMax)
       }
 
       // If it is a phone number, decorate it
@@ -137,10 +169,9 @@ export default class InputField extends Vue {
   * @param isBlur boolean determines where on blur or not
   * @return string – current value
   */
-  validateCheckbox (value: string) {
-    const groupValues = this.$store.getters[this.getter]
-    if (groupValues.length === 1 && value === groupValues[0]) {
-      value = ''
+  validateArray (value: string[]) {
+    if (!value.length) {
+      value = []
       this.hasError = true
     } else {
       this.hasError = false
@@ -158,26 +189,8 @@ export default class InputField extends Vue {
     return match ? match.join('-') : ''
   }
 
-  // Event Handlers
-
-  /**
-  * Validates field, and updates store accordingly
-  * @return none
-  */
-  onInputChange (event: Event) {
-    const val = (event.target as HTMLInputElement)?.value
-    this.value = this.validateField(val)
-    this.$store.commit(this.mutation, { value: this.value })
-  }
-
-  /**
-  * Validates field, and updates store accordingly
-  * @return none
-  */
-  onCheckboxChange (event: Event) {
-    const val = (event.target as HTMLInputElement)?.value
-    this.value = this.validateField(val)
-    this.$store.commit(this.mutation, { value: val })
+  onBlur () {
+    this.validateField(this.$store.getters[this.getter])
   }
 }
 </script>
@@ -187,19 +200,13 @@ export default class InputField extends Vue {
   label, p{
     display: block;
     width: 100%;
-    padding: 0px 0 0;
+    padding: 0;
     text-align: left;
     input, select, textarea{
       @include standard-input;
     }
     textarea{
       height: 100px;
-    }
-    .character-count{
-      display: block;
-      width: 100%;
-      font-size: .8em;
-      text-align: right;
     }
   }
   span.required{
@@ -209,18 +216,23 @@ export default class InputField extends Vue {
   .checkboxes{
     display: flex;
     flex-wrap: wrap;
+    padding-bottom: 20px;
     p{
       margin: 0;
     }
     label{
       padding: 0;
       flex-basis: 50%;
+      @media (max-width: 767px){
+        flex-basis: 100%;
+      }
       span{
         padding-left: 5px;
       }
     }
     input{
       width: auto;
+      margin-top: 5px;
     }
     .required{
       font-size: .8em;
@@ -231,5 +243,14 @@ export default class InputField extends Vue {
     font-size: .8em;
     margin: 0;
     padding: 5px 0 10px 15px;
+  }
+  .field-notes{
+    display: flex;
+    .character-count{
+      display: block;
+      width: 100%;
+      font-size: .8em;
+      text-align: right;
+    }
   }
 </style>

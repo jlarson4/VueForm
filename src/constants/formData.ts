@@ -12,7 +12,7 @@ const formData: IFormData = {
       placeholder: 'John Smith',
       label: 'Full Name',
       required: true,
-      charMin: 3,
+      inputMin: 3,
       mutation: mutations.fullname,
       getter: getters.fullname
     },
@@ -24,8 +24,8 @@ const formData: IFormData = {
       label: 'Telephone Number',
       required: true,
       characterRestriction: /[^0-9]/g,
-      charMax: 10,
-      charMin: 10,
+      inputMax: 10,
+      inputMin: 10,
       mutation: mutations.telephone,
       getter: getters.telephone
     },
@@ -56,7 +56,7 @@ const formData: IFormData = {
       placeholder: 'Additional details...',
       label: 'Description',
       required: true,
-      charMax: 500,
+      inputMax: 500,
       mutation: mutations.description,
       getter: getters.description
     }
