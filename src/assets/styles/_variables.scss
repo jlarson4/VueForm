@@ -1,0 +1,31 @@
+// Color constants
+$color-base: #000;
+$color-reverse: #fff;
+$color-lt-gray: #f3f5f7;
+$color-dk-gray: #939598;
+$color-error: #ea0000;
+$color-background: #005891;
+
+// Style Mixins
+@mixin standard-input {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid lighten($color-dk-gray, 15%);
+  border-radius: 25px;
+  padding: 10px 25px;
+  margin-top: 15px;
+  &.error{
+    border-color: $color-error;
+  }
+}
+
+select{
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background: url( "/src/assets/selectarrow.png" ) right 15px center no-repeat $color-reverse;
+  background-size: auto 8px;
+  &::-ms-expand {
+    display: none;
+  }
+}
