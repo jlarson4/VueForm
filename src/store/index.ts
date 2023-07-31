@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 
-import { mutations, getters, initialStore } from '../models/store'
+import { getters, mutations, actions, initialStore } from '../models/store'
 
 Vue.use(Vuex)
 
@@ -38,12 +38,10 @@ export default new Vuex.Store({
       state.interest = payload.value
     },
     [mutations.reference] (state, payload) {
-      const valueIndex = state.reference.indexOf(payload.value)
-      if (valueIndex > -1) {
-        state.reference.splice(valueIndex, 1)
-      } else {
-        state.reference.push(payload.value)
-      }
+      state.reference = payload.value
+    },
+    [mutations.submitForm] (state, payload) {
+      state.submitSuccess = payload.value
     },
     [mutations.validateField] (state) {
       state.validFields++
@@ -58,9 +56,20 @@ export default new Vuex.Store({
       state.telephone = ''
       state.interest = ''
       state.reference = []
+      state.submitSuccess = false
     }
   },
   actions: {
+    [actions.submitForm] ({ commit }, payload) {
+      // Is unncessary here, but in a real world scenario this would need to go out
+      // to an API and await a response for successful storage/mail/usage of data
+      return new Promise((resolve: (value: void) => void) => {
+        setTimeout(() => {
+          commit(mutations.submitForm, payload)
+          resolve()
+        }, 1000)
+      })
+    }
   },
   modules: {
   }
